@@ -1,0 +1,82 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: reactjs
+type: Opaque
+stringData:
+  DB_PASSWORD: "dummy"
+  DB_USER: "dummy"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reactjs
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: reactjs
+    protocol: TCP
+    name: reactjs
+  selector:
+    app.kubernetes.io/name: reactjs
+    app.kubernetes.io/instance: reactjs
+---
+# Source: devexp-reactjs/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reactjs
+  labels:
+    app.kubernetes.io/name: reactjs
+    app.kubernetes.io/instance: reactjs
+    app: reactjs
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: reactjs
+      app.kubernetes.io/instance: reactjs
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: reactjs
+        app.kubernetes.io/instance: reactjs
+    spec:
+      containers:
+      - name: reactjs
+        image: "docker-vault.repo-aws.cloudone.netapp.com/devexp-workspace/reactjs-reactjs:4.7.0-v4-7-jul25-m024c9ed0"
+        imagePullPolicy: Always
+        envFrom:
+        - secretRef:
+            name: reactjs-
+        ports:
+        - name: reactjs
+          containerPort: 8080
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /
+            port: reactjs
+        readinessProbe:
+          httpGet:
+            path: /
+            port: reactjs
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 200m
+            memory: 128Mi
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: reactjs
+              topologyKey: kubernetes.io/hostname
+            weight: 100
